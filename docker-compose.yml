@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  weaviate:
+    image: semitechnologies/weaviate:1.24.1
+    container_name: weaviate
+    platform: linux/arm64  # Mac M1 用户加上
+    ports:
+      - "8080:8080"
+      - "50051:50051"
+    volumes:
+      - ./data/weaviate:/var/lib/weaviate
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+      PERSISTENCE_DATA_PATH: /var/lib/weaviate
+      ENABLE_MODULES: 'text2vec-openai'
+      DEFAULT_VECTORIZER_MODULE: 'text2vec-openai'
+      OPENAI_APIKEY: ${OPENAI_API_KEY}
+      CLUSTER_HOSTNAME: 'node1'
+    restart: unless-stopped
+    networks:
+      - rag_network
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open_webui
+    depends_on:
+      - weaviate
+    ports:
+      - "3000:8080"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ENABLE_SIGNUP=true
+    volumes:
+      - ./data/open_webui:/app/backend/data
+      - ./scripts:/app/backend/scripts
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    networks:
+      - rag_network
+
+  n8n-custom:
+    build:
+      context: ./scripts
+      dockerfile: dockerfile.n8n-python
+    container_name: n8n-custom
+    ports:
+      - "5678:5678"
+    volumes:
+      - ~/.n8n:/home/node/.n8n
+      - ./data/resumes:/home/node/data/resumes   # 确保简历挂载也在
+      - ./scripts:/home/node/scripts   # ✅ 添加 scripts 目录挂载
+    depends_on:
+      - weaviate
+    env_file:
+      - .env       # ✅ 加上这行
+    restart: unless-stopped
+    networks:
+      - rag_network
+
+networks:
+  rag_network:
+    driver: bridge
+
+volumes:
+  weaviate_data:
+  n8n_data:
