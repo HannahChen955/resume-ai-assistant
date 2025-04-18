@@ -4,7 +4,7 @@ services:
   weaviate:
     image: semitechnologies/weaviate:1.24.1
     container_name: weaviate
-    platform: linux/arm64  # Mac M1 用户加上
+    platform: linux/arm64
     ports:
       - "8080:8080"
       - "50051:50051"
@@ -23,7 +23,7 @@ services:
       - rag_network
 
   open-webui:
-    image: ghcr.io/open-webui/open-webui:main
+    image: ghcr.io/open-webui/open-webui  # ✅ 最新原生版本，无需版本锁定
     container_name: open_webui
     depends_on:
       - weaviate
@@ -34,7 +34,8 @@ services:
       - ENABLE_SIGNUP=true
     volumes:
       - ./data/open_webui:/app/backend/data
-      - ./scripts:/app/backend/scripts
+      - ./open-webui/backend:/app/backend
+      - ./data/markdown_uploads:/data/markdown_uploads
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
@@ -42,20 +43,19 @@ services:
       - rag_network
 
   n8n-custom:
-    build:
-      context: ./scripts
-      dockerfile: dockerfile.n8n-python
+    image: recruitment_rag_system-n8n-custom
     container_name: n8n-custom
     ports:
       - "5678:5678"
     volumes:
       - ~/.n8n:/home/node/.n8n
-      - ./data/resumes:/home/node/data/resumes   # 确保简历挂载也在
-      - ./scripts:/home/node/scripts   # ✅ 添加 scripts 目录挂载
+      - ./data/resumes:/home/node/data/resumes
+      - ./requirements.txt:/data/requirements.txt
+      - ./search_candidates.py:/data/search_candidates.py
     depends_on:
       - weaviate
     env_file:
-      - .env       # ✅ 加上这行
+      - .env
     restart: unless-stopped
     networks:
       - rag_network

@@ -1,0 +1,88 @@
+{
+    "nodes": [
+      {
+        "id": "webhook_trigger",
+        "name": "Webhook Trigger",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [100, 300],
+        "parameters": {
+          "path": "search-candidates",
+          "method": "POST",
+          "responseMode": "onReceived"
+        }
+      },
+      {
+        "id": "run_search_script",
+        "name": "Run search_candidates.py",
+        "type": "n8n-nodes-base.executeCommand",
+        "typeVersion": 1,
+        "position": [400, 300],
+        "parameters": {
+          "command": "python3 /data/scripts/search_candidates.py",
+          "shell": true
+        }
+      },
+      {
+        "id": "run_md_script",
+        "name": "Generate Markdown Files",
+        "type": "n8n-nodes-base.executeCommand",
+        "typeVersion": 1,
+        "position": [700, 300],
+        "parameters": {
+          "command": "python3 /data/scripts/generate_candidate_md.py",
+          "shell": true
+        }
+      },
+      {
+        "id": "response",
+        "name": "Return Markdown Paths",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [1000, 300],
+        "parameters": {
+          "responseMode": "onReceived",
+          "responseData": "lastNode",
+          "options": {}
+        }
+      }
+    ],
+    "connections": {
+      "Webhook Trigger": {
+        "main": [
+          [
+            {
+              "node": "Run search_candidates.py",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Run search_candidates.py": {
+        "main": [
+          [
+            {
+              "node": "Generate Markdown Files",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Generate Markdown Files": {
+        "main": [
+          [
+            {
+              "node": "Return Markdown Paths",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "name": "Search Candidates + Markdown Export",
+    "active": true,
+    "settings": {}
+  }
