@@ -1,0 +1,326 @@
+==============================
+姓名：王玲玥
+应聘职位：系统工程师
+手机号：15207147352
+邮箱：lingyue_wang@sina.com
+==============================
+王玲玥
+女| 28 岁(1996/02) | 3 年工作经验| 中共党员| 现居住湖北省
+15207147352
+lingyue_wang@sina.com
+优势亮点
+1、本科阶段学习电子信息，研究生阶段学习光学工程，光电理论基础扎实。
+2、在欧菲光和南京芯视界工作的3 年中，不仅负责DTOF 比如LDS 的标定，系统级仿真，评测、数据处理以及飞点的滤波算
+法；还负责ITOF 杂散光、多路径、运动模糊、人眼安全、抗环境光等测试，对整个TOF 领域有较深刻的认识。并且对摄像头模
+组接收端光斑进行仿真，校招进入车间产线实习过两个月左右，对模组端发射线和接收线有一定的了解。
+3、对matlab 仿真应用熟练，数据处理分析熟悉。
+4、事业进取心强，广泛参与了LDS 从0 到1 的技术实现过程，主要负责光电类的测试、标定，对光电行业有较深的见解，取得
+了一定的专业成果。
+工作经历
+南京芯视界微电子科技有限公司
+2023/10-2024/4
+系统工程师
+电子技术/半导体/集成电路|150-500 人|创业公司
+工作描述：
+工作职责：
+1、新产品调研、竞品分析、系统应用技术拓展和需求确定。
+2、推动产品立项评估、研发进度、样品试制、样品验证及客户量产问题解决。
+3、客户应用支持，系统级测试，标定。
+工作业绩：
+1、推动团队研发、试做KWS 和同轴激光雷达模组。
+2、通过matlab 对实测数据进行寻峰分析，定位到LD 罩子脏污问题是由于寻峰只能寻到最前峰，通过调整峰-峰
+gap 可解决。
+3、完成KWS 模组、同轴模组参考设计；完成多峰固件验证。
+4、通过matlab 完成模组标定，分析标定数据，为客户定位标定数据问题。
+5、根据已有的系统模型，改变系统参数，进行系统模型仿真。
+6、调试修改python 程序，处理并整理ATE 数据。
+7、处理客诉问题：在TX 周期性打光信号前有两段打光信号，通过客户提供电路原理图，自己焊线引出Tx trig
+信号到示波器，更新驱动程序，定位这两段信号目的是确定打光帧率。
+8、完成模组标定、测试；回复客户针对DTOF 芯片的问题，包括寄存器配置，DTOF 原理，提升产品精准度等
+问题。
+欧菲光集团微电子事业部（2 年3 个月）
+2021/6-2023/9
+测试开发工程师
+电子技术/半导体/集成电路|1000-5000 人|已上市
+工作描述：
+工作职责：
+1、TOF、RGBD 模组相关性能评测、问题点对策及模组性能改善。
+2、扫地机、车载项目前期调研和预言。
+3、与客户对齐评价标准，支持客户端测试。
+4、仿真类计算。
+工作业绩：
+-VvyeWOGjnvbVMhVn2Q
+-VvyeWOGjnvbVMhVn2Q
+~
+-VvyeWOGjnvbVMhVn2Q 1、在研发阶段排查出LDS 镜筒透光，为公司节约人力物力。
+2、提升抗环境光能力从25klx 到50klx 左右。
+3、编写matlab 代码滤除前后景引入的散点。
+4、给定模组及sensor 参数，理论计算各反射率下模组最远探测距离。
+5、对pileup 曲线进行拟合计算相关系数，完成标定过程。
+6、计算太阳光中某个照度下某个波段光源的辐射照度，用于理论推导在太阳光下模组的最远探测距离。
+7、通过测试分析得出顺光下模组最远探测距离小于逆光环境的结论。
+8、写matlab 程序完成sensor 端接收spot 仿真。
+9、定位排查到双Tx doe 安装位置有偏差，AA 散斑偏大且弥散。
+10、部门内人眼安全测试与计算
+项目经验
+扫地机同轴项目
+2023/12-2024/4
+所属公司：
+南京芯视界微电子科技有限公司
+项目描述：
+项目背景：开发一款扫地机上激光雷达模组（DTOF）做避障、SLAM 用途推广客户
+项目责任：推动产品立项、研发进度、产品测试及标定、参考设计、系统模型仿真、客户应用支持
+项目成就：成功完成模组打样及性能测试，实测性能基本满足设计需求。
+双TX 模组
+2023/1-2023/9
+所属公司：
+欧菲光集团微电子事业部
+项目描述：
+项目背景：开发一款扫地机上激光雷达模组（ITOF）做避障、SLAM 用途推广客户
+项目责任：完成matlab 代码实现sensor 端接收spot 光斑仿真、模组性能测试及改善、通过上位机调参，分析
+滤波参数作用、计算太阳光谱辐照度
+项目成就：成功完成模组打样及性能测试，实测性能满足设计需求
+扫地机LDS 项目
+2022/1-2023/9
+所属公司：
+欧菲光集团微电子事业部
+项目描述：
+项目背景：开发一款扫地机上激光雷达模组（DTOF）做避障、SLAM 用途推广客户
+项目责任：模组性能&场景测试、扫地机LDS 市场调研、抗环境光性能提升、前后景等引入飞点滤波算法、多路
+径问题分析及改善、模组标定、模组最远探测距离计算、模组一致性问题排查、负责与客户端对接性能测试、完
+成各种数据处理的matlab 代码编写
+项目成就：成功完成模组打样及性能测试，实测性能满足设计需求
+教育经历
+湖北工业大学
+2018/9-2021/6
+硕士| 光学工程
+专业描述：
+课程内容：激光原理和技术、传感器组成原理、光学信息处理、光学计量与测试等
+毕业论文：基于激光干涉的圆管束自然对流换热实验与数值研究
+中南财经政法大学211
+2016/9-2018/6
+本科| 商务英语
+专业描述：
+课程内容：高级英语、英语口语、英语写作、汉译英、英译汉、商务英语视听说、英美文学等
+-VvyeWOGjnvbVMhVn2Q
+~
+-VvyeWOGjnvbVMhVn2Q 湖北工业大学
+2014/9-2018/6
+本科| 电子信息科学与技术
+专业描述：
+课程内容：信号与系统、电路原理、模拟集成电路分析与设计、数字集成电路分析与设计、电
+磁场与电磁波、半导体物理、单片机、C 语言程序设计、数据结构、计算机网络、计算机组成
+原理等。
+毕业论文：基于LabView 的数字存储示波器设计
+在校情况
+校内荣誉
+湖北工业大学一等奖学金
+2019/3
+湖北工业大学二等奖学金
+2016/3
+湖北工业大学数学竞赛三等奖
+2015/3
+校内职务
+理学院女生部部长
+2014/10-2017/10
+职务描述：
+1、负责理学院女生部常规卫生、安全查寝；
+2、组织女生文化节户外活动、组织寝室文化节室内装扮与评比；
+3、完成院内各部门间组织活动协助支持。
+技能特长
+技能/语言
+C/C
+良好
+Matlab
+熟练
+证书
+CET6
+2016/9
+Advantages and highlights
+-VvyeWOGjnvbVMhVn2Q
+~
+-VvyeWOGjnvbVMhVn2Q 1、I majored in electronic information during my undergraduate study and optical engineering during my postgradua
+te study. I have a solid theoretical foundation in optics and electricity.
+2、During the three years of working in Ofilm and Nanjing Core Vision Microelectronics Co. , Ltd. , I was not only resp
+onsible for the calibration of DTOF such as LDS, system-level simulation, evaluation, data processing and filtering algo
+rithm of flying points; Also responsible for ITOF stray light, multipath, motion blur, eye safety, anti-ambient light and o
+ther tests, I have a deep understanding of the entire field of TOF. In addition, I simulated the light spot of the receivin
+g end of the camera module, and worked in the production line of the workshop for about two months, so I have a ce
+rtain understanding of the module making emission line and receiving line.
+3、Familiar with matlab simulation application, data processing and analysis.
+4、With strong career initiative, I have extensively participated in the technical realization process of LDS from 0 to 1,
+mainly responsible for the testing and calibration in optics and electricity, and have a deeper insight into the optical a
+nd electrical industry and achieved certain professional results.
+Work experience
+Nanjing Core Vision Microelectronics
+Co. , Ltd. (6 months)
+2023/10-2024/4
+System development engineer
+Electronic technology/semiconductor/integrated circuit |150-500 people | startup company
+Job
+Description:
+Job responsibilities:
+1, New product research, competitive product analysis, system application technology developmen
+t and demand determination.
+2, Promote product project evaluation, research and development progress, sample trial productio
+n, sample verification and customer mass production problem solving.
+3, Customer application support, system level testing, calibration.
+Work performance:
+1, Driving the team to develop KWS and coaxial LiDAR modules.
+2, Through matlab peak search analysis of the measured data, it is located that the LD cover dirt pr
+oblem is because the peak search can only find the most front peak, which can be solved by adjusti
+ng the peak-peak gap.
+3, Complete the reference design of KWS module and coaxial module; Complete multi-peak firmwa
+re verification..
+4, Completed module calibration through matlab, analyzed calibration data, and positioned calibrat
+ion data problems for customers.
+5, According to the existing system model, change the system parameters and simulate the system
+model.
+6, Debugging and modifying python programs, processing and sorting ATE data.
+7, deal with customer complaints: there are two sections of light signal before the TX periodic light
+signal, through the customer to provide circuit schematic, their own wire leads to the Tx trig signal
+to the oscilloscope, update the driver, locate the two sections of signal to determine the light frame
+rate.
+8, Completed module calibration and testing; Answer customer's questions about DTOF chip, inclu
+ding register configuration, DTOF principle, improve product accuracy and so on.
+Microelectronics Division of Ofilm Group (2
+years and 3 months)
+2021/6-2023/9
+Test development engineer
+Electronic technology/semiconductor/integrated circuit |1000-5000 people | is available
+-VvyeWOGjnvbVMhVn2Q
+~
+-VvyeWOGjnvbVMhVn2Q Job
+Description:
+Job responsibilities:
+1, TOF, RGBD module related performance evaluation, problem countermeasures and module perf
+ormance improvement.
+2. Preliminary investigation and prediction of sweeper and vehicle project.
+3. Align evaluation criteria with customers and support client-side testing.
+4. Simulation calculation.
+Work performance:
+1. Check the light transmission of LDS mirror tube in the research and development stage, saving m
+anpower and material resources for the company.
+2, improve the resistance to ambient light from 25klx to 50klx.
+3, write matlab code to filter the scatter introduced by the front and back scenes.
+4, Given module and sensor parameters, theoretically calculate the farthest detection distance of th
+e module under each reflectivity.
+5, Fit the pileup curve to calculate the correlation coefficient and complete the calibration process.
+6, calculate the irradiance of a certain band light source under a certain illuminance in the sun, used
+to theoretically deduce the farthest detection distance of the module under the sun.
+7, Through testing and analysis, it is concluded that the farthest detection distance of the module i
+n the downlight environment is less than that in the backlight environment.
+8, Write matlab program to complete the spot simulation received by sensor end.
+9, The positioning check found that the double Tx doe installation position was deviated, and the A
+A speckle was large and dispersed.
+10, Eye safety test and calculation in the department
+Project experience
+Vacuum cleaner coaxial
+project
+2023/12-2024/4
+Company:
+Nanjing Core Vision Microelectronics Co. , Ltd.
+Project
+Description:
+Project background: Develop a laser radar module (DTOF) for sweeping machin
+e to promote customers for obstacle avoidance and SLAM.
+Project responsibilities: Promote product project approval, R&D progress, prod
+uct testing and calibration, reference design, system model simulation, customer
+application support
+Project achievements: Successfully completed module proofing and performanc
+e testing, and the measured performance basically met the design requirements.
+Dual TX module project
+2023/1-2023/9
+Company:
+Microelectronics Division of Ofilm Group
+Project
+Description:
+Project background: Develop a laser radar module (ITOF) for vacuum cleaners t
+o promote customers for obstacle avoidance and SLAM.
+Project responsibilities: Complete matlab code to realize sensor terminal receivi
+ng spot spot simulation, module performance testing and improvement, adjust p
+arameters through the upper computer, analyze filtering parameters, and calcula
+te solar spectral irradiance.
+-VvyeWOGjnvbVMhVn2Q
+~
+-VvyeWOGjnvbVMhVn2Q Project achievements: Successfully completed module proofing and performanc
+e testing, and the measured performance met the design requirements.
+Vacuum cleaner LDS project
+2022/1-2023/9
+Company:
+Microelectronics Division of Ofilm Group
+Project
+Description:
+Project background: Develop a laser radar module (DTOF) for sweeping machin
+e to promote customers for obstacle avoidance and SLAM.
+Project responsibilities: module performance & scene testing, vacuum cleaner L
+DS market research, anti-ambient light performance improvement, front and rear
+view introduction of flying point filtering algorithm, multipath problem analysis
+and improvement, module calibration, module furthest detection distance calcul
+ation, module consistency problem troubleshooting, responsible for client dockin
+g performance testing, and completed matlab code writing for various data proc
+essing
+Project achievements: Successfully completed module proofing and performanc
+e testing, and the measured performance met the design requirements
+-VvyeWOGjnvbVMhVn2Q
+~
+-VvyeWOGjnvbVMhVn2Q Educational experience
+Hubei University of Technology
+2018/9-2021/6
+Master's degree | optical Engineering
+Professional
+Description:
+Course content: Laser principle and technology, sensor composition principle, optical
+information processing, optical measurement and testing, etc
+Graduation thesis: Natural convection heat transfer from two horizontal cylinders
+using a lateral shearing interferometer with a large shear amount.
+Zhongnan University of Economics and Law 211
+2016/9-2018/6
+Undergraduate | Business English
+Professional
+Description:
+Course content: Advanced English, Spoken English, Written English, Chinese-English tr
+anslation, English-Chinese, Business English Audio-visual Speaking, British and Americ
+an Literature, etc
+Hubei University of Technology
+2014/9-2018/6
+Undergraduate | Electronic Information science and technology
+Professional
+Description:
+Course content: Signal and System, Circuit Principle, analog Integrated Circuit Analysi
+s and design, digital Integrated Circuit analysis and design, Electromagnetic field and
+electromagnetic wave, semiconductor physics, single chip microcomputer, C languag
+e programming, data structure, computer network, computer composition principle, e
+tc.
+Graduation thesis: Design of digital storage oscilloscope based on LabView.
+School situation
+Intramural honor
+Hubei University of Technology first-class scholarship
+2019/3
+Hubei University of Technology second-class scholarship
+2016/3
+Third prize in mathematics competition of Hubei University of Technology
+2015/3
+On-campus position
+Head of Women's Department, College of Science
+2014/10-2017/10
+Job
+Description:
+1. Responsible for routine health and safety inspection of the girls' Department of the College of Science;
+2. Organized outdoor activities of girls' cultural festival, organized indoor decoration and evaluation of dormitory cult
+val;
+3. Assist and support inter-departmental activities within the Faculty of Science.
+Skill and specialty
+Skills/Language
+C/C
+good
+Matlab
+dexterity
+certificate
+-VvyeWOGjnvbVMhVn2Q
+~
+-VvyeWOGjnvbVMhVn2Q CET6
+2016/9
+-VvyeWOGjnvbVMhVn2Q
+~
+-VvyeWOGjnvbVMhVn2Q

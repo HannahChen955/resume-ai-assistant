@@ -1,0 +1,20 @@
+FROM n8nio/n8n:latest
+
+USER root
+
+# 安装 Python 和 pip
+RUN apk add --no-cache python3 py3-pip python3-dev
+
+# 创建并激活虚拟环境
+ENV VIRTUAL_ENV=/opt/venv
+RUN python3 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+# 复制并安装 Python 依赖
+COPY requirements.txt /tmp/requirements.txt
+RUN . $VIRTUAL_ENV/bin/activate && pip install --no-cache-dir -r /tmp/requirements.txt
+
+# 确保脚本使用虚拟环境中的 Python
+ENV PYTHONPATH="$VIRTUAL_ENV/lib/python3.11/site-packages:$PYTHONPATH"
+
+USER node 

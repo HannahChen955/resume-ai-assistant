@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   weaviate:
-    image: semitechnologies/weaviate:1.24.1
+    image: semitechnologies/weaviate:1.24.5
     container_name: weaviate
     platform: linux/arm64
     ports:
@@ -22,28 +22,10 @@ services:
     networks:
       - rag_network
 
-  open-webui:
-    image: ghcr.io/open-webui/open-webui  # ✅ 最新原生版本，无需版本锁定
-    container_name: open_webui
-    depends_on:
-      - weaviate
-    ports:
-      - "3000:8080"
-    environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - ENABLE_SIGNUP=true
-    volumes:
-      - ./data/open_webui:/app/backend/data
-      - ./open-webui/backend:/app/backend
-      - ./data/markdown_uploads:/data/markdown_uploads
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    restart: unless-stopped
-    networks:
-      - rag_network
-
   n8n-custom:
-    image: recruitment_rag_system-n8n-custom
+    build:
+      context: .
+      dockerfile: Dockerfile.n8n
     container_name: n8n-custom
     ports:
       - "5678:5678"
@@ -51,11 +33,20 @@ services:
       - ~/.n8n:/home/node/.n8n
       - ./data/resumes:/home/node/data/resumes
       - ./requirements.txt:/data/requirements.txt
-      - ./search_candidates.py:/data/search_candidates.py
-    depends_on:
-      - weaviate
+      - ./scripts:/data/scripts
     env_file:
       - .env
+    restart: unless-stopped
+    networks:
+      - rag_network
+
+  nocodb:
+    image: nocodb/nocodb:latest
+    container_name: nocodb
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./nocodb_data:/usr/app/data
     restart: unless-stopped
     networks:
       - rag_network
