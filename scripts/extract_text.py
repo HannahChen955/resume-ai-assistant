@@ -16,11 +16,11 @@ from scripts.config import settings
 
 # ✅ 环境变量
 load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = OpenAI(api_key=os.getenv("OPENAI_APIKEY"))
 
 # ✅ 路径配置
-INPUT_DIR = "data/resumes"
-OUTPUT_DIR = "data/resumes_extract_enhanced"
+INPUT_DIR = settings.RESUME_DIR
+OUTPUT_DIR = settings.EXTRACTED_DIR
 MODEL = "gpt-3.5-turbo-1106"
 
 # ✅ 黑名单关键词
