@@ -13,48 +13,29 @@ root_dir = str(Path(__file__).parent.parent.parent)
 if root_dir not in sys.path:
     sys.path.append(root_dir)
 
-from scripts.config import Config
 from scripts.search_candidates import ResumeSearcher
+
+DEFAULT_TOP_K = 5  # 可根据需要修改默认值
 
 class SearchRunner:
     """搜索执行器类"""
-    
+
     def __init__(self):
-        """初始化搜索执行器"""
         self.searcher = ResumeSearcher()
-    
-    async def search(self, query: str, top_k: int = Config.TOP_K_RESULTS) -> Dict[str, Any]:
-        """
-        异步执行搜索
-        
-        Args:
-            query: 搜索关键词
-            top_k: 返回结果数量
-            
-        Returns:
-            搜索结果字典
-        """
-        # 创建事件循环
+
+    async def search(self, query: str, top_k: int = DEFAULT_TOP_K) -> Dict[str, Any]:
         loop = asyncio.get_event_loop()
-        
-        try:
-            # 连接数据库
-            self.searcher.connect()
-            
-            # 在线程池中执行搜索
-            results = await loop.run_in_executor(
-                None,
-                self.searcher.search,
-                query
-            )
-            
-            # 限制返回结果数量
-            if results and "候选人列表" in results:
-                results["候选人列表"] = results["候选人列表"][:top_k]
-                results["候选人数量"] = len(results["候选人列表"])
-            
-            return results
-            
-        finally:
-            # 确保关闭连接
-            self.searcher.disconnect() 
+
+        # 在后台线程中运行搜索（非阻塞主线程）
+        results = await loop.run_in_executor(
+            None,
+            self.searcher.search,
+            query
+        )
+
+        # 截断候选人列表（最多返回 top_k 个）
+        if results and "候选人列表" in results:
+            results["候选人列表"] = results["候选人列表"][:top_k]
+            results["候选人数量"] = len(results["候选人列表"])
+
+        return results

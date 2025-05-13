@@ -5,31 +5,58 @@ import re
 import sys
 import json
 import uuid
-import fitz  # PyMuPDF
+import fitz
 from docx import Document
 from tqdm import tqdm
 from pdf2image import convert_from_path
 from PIL import Image
 import pytesseract
 from dotenv import load_dotenv
+from openai import OpenAI
 
-# ✅ 修复导入路径：添加项目根目录到 sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-# ✅ 导入配置与模型
-from scripts.config import settings
-from scripts.llm_extractor import LLMExtractor
-
-# ✅ 环境加载与模型初始化
+# ✅ 加载 .env
 load_dotenv()
-llm_extractor = LLMExtractor()
 
-# ✅ 路径配置
-INPUT_DIR = settings.RESUME_DIR
-OUTPUT_DIR = settings.EXTRACTED_DIR
+# ✅ 从 .env 中读取参数
+INPUT_DIR = os.getenv("RESUME_DIR", "data/resumes")
+OUTPUT_DIR = os.getenv("EXTRACTED_DIR", "data/resumes_extract_enhanced")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+EXTRACTION_MODEL = os.getenv("LLM_FIELD_EXTRACTION_MODEL", "gpt-3.5-turbo")
 BLACKLIST = ["个人简历", "猎聘", "BOSS直聘", "客户名称", "项目名称", "original", "standard"]
 
-# ========== 工具函数 ==========
+openai_client = OpenAI(api_key=OPENAI_API_KEY)
+
+# ========== 字段提取 ==========
+
+def extract_fields(text: str) -> dict:
+    prompt = f"""
+请从以下文本中识别以下字段（若缺失请写 null）：
+- 姓名
+- 应聘职位
+- 手机号
+- 邮箱
+仅返回标准 JSON，不要附加说明。
+
+文本如下：
+\"\"\"
+{text[:600]}
+\"\"\"
+"""
+    try:
+        response = openai_client.chat.completions.create(
+            model=EXTRACTION_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            max_tokens=300
+        )
+        content = response.choices[0].message.content.strip()
+        content = re.sub(r"^```(json)?|```$", "", content)
+        return json.loads(content)
+    except Exception as e:
+        print(f"⚠️ 字段提取失败: {e}")
+        return {}
+
+# ========== 简历解析逻辑 ==========
 
 def extract_pdf_text(file_path):
     try:
@@ -126,7 +153,7 @@ def main():
                 text = "[文件读取失败或内容为空]"
 
             text = enhance_text(text)
-            fields = llm_extractor.extract(text)
+            fields = extract_fields(text)
 
             if not fields.get("姓名"):
                 fields["姓名"] = extract_name_fallback(filename, text)
