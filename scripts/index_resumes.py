@@ -22,8 +22,8 @@ MAX_TEXT_LENGTH = settings.SUMMARY_LENGTH * 40
 
 # ✅ 初始化 OpenAI 客户端
 from openai import OpenAI
-OPENAI_APIKEY = os.getenv("OPENAI_APIKEY")
-openai_client = OpenAI(api_key=OPENAI_APIKEY)
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
 def get_embedding(text: str) -> List[float]:
     response = openai_client.embeddings.create(

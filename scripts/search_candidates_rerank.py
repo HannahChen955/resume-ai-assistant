@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-简历搜索系统（REST API版）支持 OpenAI / 通义千问 / DeepSeek
+简历搜索系统（REST API + GPT 语义重排序版）
 """
 
-import os
 import sys
 import json
+import os
 import re
 import time
 import logging
@@ -13,39 +13,40 @@ import requests
 from pathlib import Path
 from typing import List, Dict, Any, Tuple
 from functools import lru_cache
+
+# 添加项目根目录到 Python 路径
+root_dir = str(Path(__file__).parent.parent)
+if root_dir not in sys.path:
+    sys.path.append(root_dir)
+
 from dotenv import load_dotenv
+from openai import OpenAI
+from scripts.config import settings
 
-# ✅ 加载 .env
-load_dotenv()
-
-# ✅ 环境变量
-WEAVIATE_URL = os.getenv("WEAVIATE_URL", "http://localhost:8080")
-WEAVIATE_CLASS = os.getenv("WEAVIATE_COLLECTION", "Candidates")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-ada-002")
-TOP_K = int(os.getenv("DEFAULT_TOP_K", "5"))
-CERTAINTY = float(os.getenv("SEARCH_CERTAINTY", "0.75"))
-SUMMARY_LENGTH = int(os.getenv("SUMMARY_LENGTH", "200"))
-EMBEDDING_CACHE_SIZE = int(os.getenv("EMBEDDING_CACHE_SIZE", "100"))
-
-# ✅ 日志设置
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+# 设置日志
+logging.basicConfig(
+    level=getattr(logging, settings.LOG_LEVEL),
+    format=settings.LOG_FORMAT
+)
 logger = logging.getLogger(__name__)
 
-# ✅ OpenAI Client
-from openai import OpenAI
-openai_client = OpenAI(api_key=OPENAI_API_KEY)
+# 加载环境变量
+load_dotenv()
+
 
 class ResumeSearcher:
     def __init__(self):
-        logger.info("🔍 初始化 ResumeSearcher")
+        self.api_key = settings.OPENAI_API_KEY
+        if not self.api_key:
+            raise ValueError("未设置 OPENAI_API_KEY")
+        self.client = OpenAI(api_key=self.api_key)
 
     @staticmethod
     def format_summary(content: str) -> str:
         if not content:
             return ""
-        summary = re.sub(r'\s+', ' ', content.strip())[:SUMMARY_LENGTH]
-        return summary + "..." if len(content) > SUMMARY_LENGTH else summary
+        summary = re.sub(r'\s+', ' ', content.strip())[:settings.SUMMARY_LENGTH]
+        return summary + "..." if len(content) > settings.SUMMARY_LENGTH else summary
 
     @staticmethod
     def parse_filename(filename: str) -> Tuple[str, str]:
@@ -56,17 +57,36 @@ class ResumeSearcher:
             job_title = match.group(2)
         return name, job_title
 
-    @lru_cache(maxsize=EMBEDDING_CACHE_SIZE)
+    @lru_cache(maxsize=settings.EMBEDDING_CACHE_SIZE)
     def get_embedding(self, text: str) -> List[float]:
         try:
-            response = openai_client.embeddings.create(
+            response = self.client.embeddings.create(
                 input=[text],
-                model=EMBEDDING_MODEL
+                model=settings.EMBEDDING_MODEL
             )
             return response.data[0].embedding
         except Exception as e:
-            logger.error(f"❌ 获取向量失败: {e}")
+            logger.error(f"获取向量失败: {e}")
             raise
+
+    def gpt_rerank_score(self, query: str, summary: str) -> float:
+        prompt = f"""你是一位招聘系统，请根据职位要求和简历摘要的匹配程度，给出 0-100 的匹配分数，只返回数字。
+职位要求：{query}
+简历摘要：{summary}
+匹配评分："""
+
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0
+            )
+            reply = response.choices[0].message.content.strip()
+            match = re.search(r"(\d{1,3})", reply)
+            return min(float(match.group(1)), 100.0) if match else 0.0
+        except Exception as e:
+            logger.warning(f"重排序评分失败: {e}")
+            return 0.0
 
     def search(self, query: str) -> Dict[str, Any]:
         start_time = time.time()
@@ -74,36 +94,46 @@ class ResumeSearcher:
 
         try:
             embedding = self.get_embedding(query)
-            logger.info(f"✅ 查询向量维度: {len(embedding)}")
+            logger.info(f"已生成查询向量，维度: {len(embedding)}")
 
             graphql_query = {
-                "query": f"""
-                {{
-                  Get {{
-                    {WEAVIATE_CLASS}(
-                      nearVector: {{
-                        vector: {json.dumps(embedding)},
-                        certainty: {CERTAINTY}
-                      }},
-                      limit: {TOP_K}
-                    ) {{
+                "query": """
+                {
+                  Get {
+                    %s(
+                      nearVector: {
+                        vector: %s,
+                        certainty: %s
+                      },
+                      limit: %d
+                    ) {
                       filename
                       content
-                      _additional {{
+                      _additional {
                         id
                         distance
-                      }}
-                    }}
-                  }}
-                }}
-                """
+                      }
+                    }
+                  }
+                }
+                """ % (
+                    settings.WEAVIATE_COLLECTION,
+                    json.dumps(embedding),
+                    settings.SEARCH_CERTAINTY,
+                    settings.DEFAULT_TOP_K
+                )
             }
 
-            res = requests.post(f"{WEAVIATE_URL}/v1/graphql", json=graphql_query)
+            res = requests.post(
+                url=f"{settings.WEAVIATE_URL}/v1/graphql",
+                json=graphql_query
+            )
+
             if res.status_code != 200:
                 raise Exception(f"GraphQL 请求失败：{res.status_code} - {res.text}")
 
-            results = res.json()["data"]["Get"][WEAVIATE_CLASS]
+            results = res.json()["data"]["Get"][settings.WEAVIATE_COLLECTION]
+
             candidates = []
             for obj in results:
                 content = obj.get("content", "")
@@ -111,19 +141,27 @@ class ResumeSearcher:
                 additional = obj.get("_additional", {})
                 distance = additional.get("distance", 1.0)
                 certainty = (1 - float(distance)) * 100
-
                 name, job_title = self.parse_filename(filename)
+
+                summary = self.format_summary(content)
+
                 candidates.append({
                     "UUID": additional.get("id", "未知"),
                     "姓名": name,
                     "应聘职位": job_title,
                     "文件名": filename,
                     "匹配度": f"{certainty:.1f}%",
-                    "简历摘要": self.format_summary(content),
+                    "简历摘要": summary,
                     "简历内容": content,
                 })
 
-            candidates.sort(key=lambda x: float(x["匹配度"].rstrip("%")), reverse=True)
+            # 加入 GPT 重排序评分
+            for c in candidates:
+                c["语义评分"] = self.gpt_rerank_score(query, c["简历摘要"])
+                logger.info(f"{c['姓名']} GPT语义评分: {c['语义评分']}")
+
+            # 按语义评分排序
+            candidates.sort(key=lambda x: x["语义评分"], reverse=True)
             elapsed = time.time() - start_time
 
             return {
@@ -134,8 +172,9 @@ class ResumeSearcher:
             }
 
         except Exception as e:
-            logger.error(f"❌ 搜索失败: {e}")
+            logger.error(f"搜索失败: {e}")
             raise
+
 
 def main():
     query = ""
@@ -152,6 +191,7 @@ def main():
         return
 
     print(f"搜索关键词: {query}")
+
     try:
         searcher = ResumeSearcher()
         result = searcher.search(query)
@@ -162,6 +202,7 @@ def main():
             "查询关键词": query,
             "状态": f"系统错误: {str(e)}"
         }, ensure_ascii=False))
+
 
 if __name__ == "__main__":
     main()

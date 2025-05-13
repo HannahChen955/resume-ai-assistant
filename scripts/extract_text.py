@@ -2,28 +2,31 @@
 
 import os
 import re
+import sys
+import json
+import uuid
 import fitz  # PyMuPDF
 from docx import Document
 from tqdm import tqdm
-from openai import OpenAI
-from dotenv import load_dotenv
-import json
-import uuid
 from pdf2image import convert_from_path
 from PIL import Image
 import pytesseract
-from scripts.config import settings
+from dotenv import load_dotenv
 
-# ✅ 环境变量
+# ✅ 修复导入路径：添加项目根目录到 sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# ✅ 导入配置与模型
+from scripts.config import settings
+from scripts.llm_extractor import LLMExtractor
+
+# ✅ 环境加载与模型初始化
 load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_APIKEY"))
+llm_extractor = LLMExtractor()
 
 # ✅ 路径配置
 INPUT_DIR = settings.RESUME_DIR
 OUTPUT_DIR = settings.EXTRACTED_DIR
-MODEL = "gpt-3.5-turbo-1106"
-
-# ✅ 黑名单关键词
 BLACKLIST = ["个人简历", "猎聘", "BOSS直聘", "客户名称", "项目名称", "original", "standard"]
 
 # ========== 工具函数 ==========
@@ -46,13 +49,11 @@ def extract_docx_text(file_path):
 
 def extract_via_ocr(pdf_path):
     try:
-        print(f"📸 尝试 OCR 识别：{os.path.basename(pdf_path)}")
+        print(f"📸 OCR 识别中：{os.path.basename(pdf_path)}")
         images = convert_from_path(pdf_path, dpi=300)
-        if not images:
-            return None
-        return pytesseract.image_to_string(images[0], lang='chi_sim')
+        return pytesseract.image_to_string(images[0], lang='chi_sim') if images else None
     except Exception as e:
-        print(f"⚠️ OCR 提取失败：{e}")
+        print(f"⚠️ OCR 失败：{e}")
         return None
 
 def enhance_text(text):
@@ -62,35 +63,6 @@ def enhance_text(text):
     text = re.sub(r'\s{2,}', ' ', text)
     text = re.sub(r'\n{3,}', '\n\n', text)
     return text.strip()
-
-def gpt_extract_fields(text):
-    snippet = text[:600]
-    prompt = f"""
-请从以下文本中识别以下字段（若缺失请写 null）：
-- 姓名
-- 应聘职位
-- 手机号
-- 邮箱
-仅返回标准 JSON，不要附加说明。
-
-文本如下：
-\"\"\"
-{snippet}
-\"\"\"
-    """
-    try:
-        response = client.chat.completions.create(
-            model=MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0,
-            max_tokens=300
-        )
-        content = response.choices[0].message.content.strip()
-        content = re.sub(r"^```(json)?|```$", "", content)
-        return json.loads(content) if content else {}
-    except Exception as e:
-        print(f"⚠️ GPT字段提取失败：{e}")
-        return {}
 
 def extract_name_fallback(filename, text):
     base = os.path.splitext(os.path.basename(filename))[0]
@@ -132,7 +104,7 @@ def main():
     files = [f for f in os.listdir(INPUT_DIR) if f.lower().endswith(('.pdf', '.docx'))]
     success, fail = 0, 0
 
-    for filename in tqdm(files, desc="Extracting with AI enhancement"):
+    for filename in tqdm(files, desc="📄 正在提取简历内容"):
         try:
             path = os.path.join(INPUT_DIR, filename)
             ext = filename.lower().split('.')[-1]
@@ -141,12 +113,12 @@ def main():
             if ext == "pdf":
                 text = extract_pdf_text(path)
                 if not text or not text.strip():
-                    print(f"⚠️ PyMuPDF 提取失败，切换 OCR：{filename}")
+                    print(f"⚠️ PDF失败，尝试OCR：{filename}")
                     text = extract_via_ocr(path)
             elif ext == "docx":
                 text = extract_docx_text(path)
             else:
-                print(f"⏭️ 跳过：不支持的格式 {filename}")
+                print(f"⏭️ 跳过：不支持格式 {filename}")
                 continue
 
             if not text or not text.strip():
@@ -154,9 +126,8 @@ def main():
                 text = "[文件读取失败或内容为空]"
 
             text = enhance_text(text)
-            fields = gpt_extract_fields(text) or {}
+            fields = llm_extractor.extract(text)
 
-            # ✅ 只有当 GPT 没提取出姓名时再 fallback
             if not fields.get("姓名"):
                 fields["姓名"] = extract_name_fallback(filename, text)
 
@@ -166,14 +137,14 @@ def main():
 
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(output_text)
-            print(f"✅ 输出：{output_name}")
+            print(f"✅ 输出完成：{output_name}")
             success += 1
 
         except Exception as e:
             print(f"❌ 处理失败：{filename} | {e}")
             fail += 1
 
-    print(f"\n🎯 完成：共 {len(files)} 份 | 成功：{success} | 失败：{fail}")
+    print(f"\n🎯 总数：{len(files)} | 成功：{success} | 失败：{fail}")
 
 if __name__ == "__main__":
     main()
