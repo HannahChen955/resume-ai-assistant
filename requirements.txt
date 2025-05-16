@@ -11,3 +11,8 @@ numpy
 markdownify
 tabulate
 simplejson
+pytesseract>=0.3.10
+pdf2image>=1.17.0
+PyMuPDF>=1.23.9
+paddleocr==2.6.2
+paddlepaddle==2.6.2

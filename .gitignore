@@ -1,1 +1,18 @@
 open-webui/
+# 忽略虚拟环境
+venv/
+
+# 忽略 Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# 忽略临时数据
+data/
+output/
+pgdata/
+nocodb_data/
+weaviate-data/
+
+# 忽略日志
+*.log
