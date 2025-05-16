@@ -89,6 +89,7 @@ class ResumeSearcher:
                     ) {{
                       filename
                       content
+                      notes
                       _additional {{
                         id
                         distance
@@ -108,6 +109,7 @@ class ResumeSearcher:
             for obj in results:
                 content = obj.get("content", "")
                 filename = obj.get("filename", "")
+                notes = obj.get("notes", [])
                 additional = obj.get("_additional", {})
                 distance = additional.get("distance", 1.0)
                 certainty = (1 - float(distance)) * 100
@@ -120,6 +122,7 @@ class ResumeSearcher:
                     "文件名": filename,
                     "匹配度": f"{certainty:.1f}%",
                     "简历摘要": self.format_summary(content),
+                    "沟通记录": notes if notes else [],
                     "简历内容": content,
                 })
 

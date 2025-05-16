@@ -5,7 +5,7 @@ FastAPI 应用主入口
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import search
+from app.routes import search, add  # ✅ 加入 add
 
 # 创建 FastAPI 应用
 app = FastAPI(
@@ -25,8 +25,9 @@ app.add_middleware(
 
 # 注册路由
 app.include_router(search.router, tags=["搜索"])
+app.include_router(add.router, tags=["数据更新"])  # ✅ 新增数据更新接口
 
 # 健康检查接口
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy"} 
+    return {"status": "healthy"}

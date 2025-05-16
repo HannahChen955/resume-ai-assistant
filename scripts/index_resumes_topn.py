@@ -85,7 +85,8 @@ def upload_resume(filename: str, content: str, vector: List[float], resume_uuid:
         "id": resume_uuid,
         "properties": {
             "filename": filename,
-            "content": content
+            "content": content,
+            "notes": []  # ✅ 初始化 notes 字段
         },
         "vector": vector
     }
