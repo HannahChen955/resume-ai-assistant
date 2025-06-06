@@ -1,122 +1,136 @@
 # app/routes/feishu_webhook.py
 
-from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse
 import os
-import logging
-import json
 import re
+import json
+import logging
 import requests
+from fastapi import APIRouter, Request
 from dotenv import load_dotenv
-from openai import OpenAI
-from scripts.search_candidates import ResumeSearcher
+from app.routes.search_async import search_candidates_async
 from app.routes.add import add_note_by_uuid
 
-load_dotenv()
-
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
-# ✅ 初始化 OpenAI 和模型配置
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-embedding_model = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-ada-002")
+# ✅ 强制使用 GPT-4o 模型
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GPT_MODEL = "gpt-4o"
 
-# ✅ 初始化 ResumeSearcher
-resume_searcher = ResumeSearcher(
-    weaviate_url=os.getenv("WEAVIATE_URL", "http://localhost:8080"),
-    weaviate_class=os.getenv("WEAVIATE_COLLECTION", "Candidates"),
-    openai_client=openai_client,
-    embedding_model=embedding_model
+# ✅ 固定提示词（模仿插件人设）
+DEFAULT_ASSISTANT_PROMPT = (
+    "你是一个招聘知识库助手。\n"
+    "当用户输入职位关键词（如'光学工程师', '算法实习'）时，\n"
+    "你会调用本地简历数据库搜索匹配的候选人。\n"
+    "请将候选人的'姓名, 应聘职位, 匹配度, 简历摘要'用清晰的格式展示给用户。\n"
+    "每次回复请合并为一条消息，最多展示5个候选人。"
 )
 
-# ✅ 飞书配置
-FEISHU_APP_ID = os.getenv("FEISHU_APP_ID")
-FEISHU_APP_SECRET = os.getenv("FEISHU_APP_SECRET")
+# ✅ 获取 tenant_access_token
+def get_tenant_token():
+    url = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal"
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "app_id": os.getenv("FEISHU_APP_ID"),
+        "app_secret": os.getenv("FEISHU_APP_SECRET"),
+    }
+    resp = requests.post(url, headers=headers, json=payload)
+    return resp.json().get("tenant_access_token")
 
-
-def get_access_token():
-    resp = requests.post("https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal", json={
-        "app_id": FEISHU_APP_ID,
-        "app_secret": FEISHU_APP_SECRET
-    })
-    return resp.json().get("tenant_access_token", "")
-
-
-def reply(text: str, user_id: str):
-    print(f"📤 正在给 {user_id} 回复: {text}")
-    access_token = get_access_token()
+# ✅ 发送消息给用户
+def reply_message(open_id: str, text: str):
+    url = "https://open.feishu.cn/open-apis/message/v4/send/"
     headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/json"
+        "Authorization": f"Bearer {get_tenant_token()}",
+        "Content-Type": "application/json",
     }
-    body = {
-        "receive_id": user_id,
-        "content": json.dumps({"text": text}),
-        "msg_type": "text"
+    data = {
+        "open_id": open_id,
+        "msg_type": "text",
+        "content": {
+            "text": text
+        }
     }
-    r = requests.post(
-        url="https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=open_id",
-        headers=headers,
-        json=body
-    )
-    logging.info(f"[📤 回复飞书用户] 状态: {r.status_code} | 内容: {r.text}")
-    return JSONResponse(content={"text": text})
+    resp = requests.post(url, headers=headers, json=data)
+    logger.info(f"📡 飞书消息投递响应: {resp.status_code} {resp.text}")
 
+# ✅ 格式化候选人信息为单条消息（精简风格，兼容中英文字段名）
+def format_candidates(candidates):
+    seen_uuids = set()
+    unique_candidates = []
+    for c in candidates:
+        uuid = c.get("uuid") or c.get("UUID") or "无UUID"
+        if uuid not in seen_uuids:
+            seen_uuids.add(uuid)
+            unique_candidates.append(c)
 
+    lines = []
+    for idx, c in enumerate(unique_candidates[:5], 1):
+        name = c.get("name") or c.get("姓名") or "未知"
+        position = c.get("position") or c.get("应聘职位") or "未知职位"
+        score = c.get("score") or c.get("匹配度") or "0.00"
+        try:
+            score_str = f"{float(score):.1f}%"
+        except:
+            score_str = str(score)
+        summary = c.get("summary") or c.get("简历摘要") or "无摘要"
+
+        lines.append(
+            f"{idx}. 姓名：{name}  \n"
+            f"应聘职位：{position}  \n"
+            f"匹配度：{score_str}  \n"
+            f"简历摘要：{summary}\n"
+        )
+    return "\n".join(lines)
+
+# ✅ webhook 路由
 @router.post("/feishu/webhook")
-async def feishu_webhook(request: Request):
+async def handle_webhook(request: Request):
     body = await request.json()
+    logger.info(f"📨 webhook 收到原始请求体: {json.dumps(body, ensure_ascii=False)}")
 
-    # 校验 URL
-    if body.get("type") == "url_verification":
-        return JSONResponse(content={"challenge": body.get("challenge")})
+    try:
+        # ✅ Feishu schema v2 兼容逻辑
+        event_type = body.get("header", {}).get("event_type", "")
+        if event_type == "im.message.receive_v1":
+            print("📥 进入 Feishu 消息事件分支")
 
-    if body.get("type") == "event_callback":
-        event = body.get("event", {})
-        content_str = event.get("message", {}).get("content", "")
-        sender_id = event.get("sender", {}).get("sender_id", {}).get("open_id", "未知用户")
+            event = body.get("event", {})
+            message = event.get("message", {})
+            content = json.loads(message.get("content", "{}"))
+            content_str = content.get("text", "")
+            sender_id = event.get("sender", {}).get("sender_id", {}).get("open_id", "未知用户")
 
-        print(f"📥 content_str: {content_str}")
-        print(f"📥 sender_id: {sender_id}")
+            print(f"📨 content_str: {content_str}")
+            print(f"📥 sender_id: {sender_id}")
 
-        try:
-            content = json.loads(content_str).get("text", "")
-        except Exception:
-            content = content_str
-
-        # 判断是否是 UUID + 备注格式（用于添加沟通记录）
-        uuid_match = re.search(r"([a-fA-F0-9\-]{36})", content)
-        note_match = re.search(r"[:：](.+)$", content)
-
-        if uuid_match and note_match:
-            uuid = uuid_match.group(1)
-            note = note_match.group(1).strip()
-            success = add_note_by_uuid(uuid, note)
-            if success:
-                return reply(f"✅ 已为候选人 {uuid[:6]} 添加沟通记录：{note}", sender_id)
+            # ✅ 判断是否是添加沟通记录请求（UUID + 备注）
+            match = re.search(r"([a-f0-9\-]{36})[\s\n\r：:]+(.+)", content_str)
+            if match:
+                uuid = match.group(1)
+                note = match.group(2).strip()
+                logger.info(f"📝 识别到 UUID + note 模式，添加沟通记录: {uuid} -> {note}")
+                result = add_note_by_uuid(uuid, note)
+                reply_message(sender_id, result)
             else:
-                return reply(f"❌ 添加沟通记录失败（可能 UUID 不存在）", sender_id)
+                # ✅ 只发一次消息：搜索结果或失败提示
+                logger.info(f"⚙️ 调用 resume_searcher.search: {content_str}")
+                results = await search_candidates_async(content_str, top_k=5)
+                candidates = results.get("候选人列表", [])
+                logger.info(f"【DEBUG】format_candidates收到的candidates: {candidates}")
+                has_valid_result = candidates and any(
+                    (c.get("name") or c.get("姓名")) not in [None, "", "未知"] and
+                    (c.get("uuid") or c.get("UUID")) not in [None, "", "无UUID"]
+                    for c in candidates
+                )
+                if has_valid_result:
+                    reply_text = format_candidates(candidates)
+                else:
+                    reply_text = "❌ 没有找到匹配的候选人，请尝试其他关键词～"
+                reply_message(sender_id, reply_text)
 
-        # 默认走搜索逻辑
-        try:
-            result = resume_searcher.search(content)
-            candidates = result.get("候选人列表", [])
+        return {"status": "ok"}
 
-            if not candidates:
-                return reply("❌ 未找到匹配候选人。", sender_id)
-
-            lines = ["🎯 匹配候选人："]
-            for idx, candidate in enumerate(candidates[:3]):
-                name = candidate.get("姓名", "未知")
-                position = candidate.get("应聘职位", "")
-                uuid = candidate.get("UUID", "")
-                notes = candidate.get("沟通记录", [])
-                notes_str = " / ".join(notes[-2:]) if notes else "暂无沟通记录"
-                lines.append(f"{idx + 1}. {name}（{position}）\nUUID: {uuid}\n备注: {notes_str}\n")
-
-            return reply("\n".join(lines), sender_id)
-
-        except Exception as e:
-            logging.exception("❌ 查询失败")
-            return reply(f"⚠️ 查询失败：{str(e)}", sender_id)
-
-    return {"code": 0}
+    except Exception as e:
+        logger.error(f"❌ webhook 处理失败: {e}")
+        return {"status": "error", "reason": str(e)}
