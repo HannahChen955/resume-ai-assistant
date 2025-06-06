@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>简历上传</title>
+  <style>
+    body { font-family: sans-serif; padding: 2em; background: #f9f9f9; }
+    .box { background: white; padding: 2em; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    input[type="file"] { margin-bottom: 1em; }
+    button { background-color: #007bff; color: white; padding: 0.5em 1em; border: none; border-radius: 4px; cursor: pointer; }
+    #message { margin-top: 1em; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>上传简历</h2>
+    <input type="file" id="resumeFile" accept=".pdf,.doc,.docx" />
+    <br />
+    <button onclick="uploadResume()">上传</button>
+    <div id="message"></div>
+  </div>
+
+  <script>
+    async function uploadResume() {
+      const fileInput = document.getElementById('resumeFile');
+      const message = document.getElementById('message');
+      const file = fileInput.files[0];
+
+      if (!file) {
+        message.style.color = 'red';
+        message.textContent = '请先选择文件。';
+        return;
+      }
+
+      message.style.color = 'gray';
+      message.textContent = '正在上传，请稍候...';
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const response = await fetch('http://localhost:8010/resume-upload-gpt-webhook', {
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          message.style.color = 'green';
+          message.textContent = '上传成功：' + JSON.stringify(result.result || result);
+          fileInput.value = '';
+        } else {
+          message.style.color = 'red';
+          message.textContent = '上传失败：' + (result.error || JSON.stringify(result));
+        }
+      } catch (error) {
+        message.style.color = 'red';
+        message.textContent = '请求错误：' + error.message;
+      }
+    }
+  </script>
+</body>
+</html>

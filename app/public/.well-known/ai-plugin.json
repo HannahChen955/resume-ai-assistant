@@ -1,0 +1,17 @@
+{
+    "schema_version": "v1",
+    "name_for_human": "Resume Search Assistant",
+    "name_for_model": "resume_search",
+    "description_for_human": "支持候选人简历搜索、添加简历、添加沟通记录的助手",
+    "description_for_model": "用于搜索简历候选人、上传简历、添加沟通记录的插件。",
+    "auth": {
+      "type": "none"
+    },
+    "api": {
+      "type": "openapi",
+      "url": "https://resume.prime-sources.com/openapi.yaml"
+    },
+    "logo_url": "https://resume.prime-sources.com/logo.png",
+    "contact_email": "support@prime-sources.com",
+    "legal_info_url": "https://resume.prime-sources.com/legal"
+  }

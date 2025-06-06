@@ -1,0 +1,96 @@
+openapi: 3.1.0
+info:
+  title: Resume Search API
+  description: 简历数据库智能助手：支持搜索候选人、上传简历、添加沟通记录与简历内容更新
+  version: 1.0.0
+servers:
+  - url: https://resume.prime-sources.com
+paths:
+  /search:
+    post:
+      operationId: searchCandidates
+      summary: 根据关键词搜索简历
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                top_k:
+                  type: integer
+                  default: 5
+              required:
+                - query
+      responses:
+        '200':
+          description: 匹配到的候选人列表
+
+  /upload_resume:
+    post:
+      operationId: uploadResume
+      summary: 上传简历文件（支持 PDF / Word，自动提取并向量化）
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+              required:
+                - file
+      responses:
+        '200':
+          description: 简历上传并处理成功
+
+  /add_note:
+    post:
+      operationId: addNote
+      summary: 为候选人添加沟通记录（通过 UUID）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                uuid:
+                  type: string
+                note:
+                  type: string
+              required:
+                - uuid
+                - note
+      responses:
+        '200':
+          description: 添加成功信息
+
+  /update_resume_content:
+    patch:
+      operationId: update_resume_content
+      summary: 更新候选人简历内容（保留沟通记录，可选更新 filename）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                uuid:
+                  type: string
+                new_content:
+                  type: string
+                filename:
+                  type: string
+                  nullable: true
+              required:
+                - uuid
+                - new_content
+      responses:
+        '200':
+          description: 简历更新成功

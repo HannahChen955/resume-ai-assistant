@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 
 import os
-import sys
 import uuid
 import time
 import json
 import requests
-from typing import List
 import re
-import pdfplumber
+from typing import List
 from tqdm import tqdm
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -21,10 +19,11 @@ RESUMES_DIR = os.getenv("EXTRACTED_DIR", "data/resumes_extract_enhanced")
 WEAVIATE_URL = os.getenv("WEAVIATE_URL", "http://localhost:8080")
 WEAVIATE_CLASS = os.getenv("WEAVIATE_COLLECTION", "Candidates")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-ada-002")
+EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-ada-002")
 NAMESPACE_UUID = uuid.UUID("12345678-1234-5678-1234-567812345678")
 TOP_N = 5
 MAX_CHUNK_LENGTH = 300
+LLM_MODEL = os.getenv("OPENAI_LLM_FIELD_EXTRACT_MODEL", "gpt-3.5-turbo")
 
 # ✅ 初始化 OpenAI 客户端
 openai_client = OpenAI(api_key=OPENAI_API_KEY)
@@ -41,7 +40,7 @@ def get_embedding(text: str) -> List[float]:
 def score_chunk(query: str, chunk: str) -> float:
     prompt = f"请根据与 {query} 岗位的相关性，对以下文本打分（满分100分），只返回数字：\n\n{chunk}"
     response = openai_client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model=LLM_MODEL,
         messages=[{"role": "user", "content": prompt}],
         temperature=0
     )
@@ -52,7 +51,7 @@ def score_chunk(query: str, chunk: str) -> float:
 
 # ✅ 切分文本段落
 def chunk_text(text: str, max_length: int) -> List[str]:
-    sentences = re.split(r'[\n。！？!？]', text)
+    sentences = re.split(r'[\n\u3002\uff01\uff1f!\?]', text)
     chunks, current = [], ""
     for sentence in sentences:
         if len(current) + len(sentence) < max_length:
@@ -64,6 +63,20 @@ def chunk_text(text: str, max_length: int) -> List[str]:
     if current:
         chunks.append(current.strip())
     return [c for c in chunks if len(c) > 10]
+
+# ✅ 从 .txt 中提取结构字段、模块内容和原文部分
+def split_txt_sections(full_text: str):
+    pattern = r"===\s*字段提取结果\s*===\n(.*?)\n+===\s*模块结构分类结果\s*===\n(.*?)\n+===\s*原始简历文本\s*===\n(.*)"
+    match = re.search(pattern, full_text, re.DOTALL)
+    if match:
+        fields_str, sections_str, raw_text = match.groups()
+        return fields_str.strip(), sections_str.strip(), raw_text.strip()
+    else:
+        return "", "", full_text.strip()
+
+# ✅ 拼接结构信息与原文文本用于向量化
+def build_vector_text(fields_str: str, sections_str: str, raw_text: str) -> str:
+    return f"""【字段信息】\n{fields_str}\n\n【模块结构分类】\n{sections_str}\n\n【原文补充】\n{raw_text}"""
 
 # ✅ 读取简历文本
 def load_resume_text(file_path: str) -> str:
@@ -86,7 +99,7 @@ def upload_resume(filename: str, content: str, vector: List[float], resume_uuid:
         "properties": {
             "filename": filename,
             "content": content,
-            "notes": []  # ✅ 初始化 notes 字段
+            "notes": []
         },
         "vector": vector
     }
@@ -104,6 +117,7 @@ def upload_resume(filename: str, content: str, vector: List[float], resume_uuid:
 
 # ✅ 主逻辑
 def index_resumes_topn():
+    print(f"🔧 当前使用 embedding 模型: {EMBEDDING_MODEL}")
     if not os.path.exists(RESUMES_DIR):
         print(f"❌ 简历目录不存在: {RESUMES_DIR}")
         return
@@ -122,7 +136,9 @@ def index_resumes_topn():
             print(f"⚠️ 跳过空文件: {filename}")
             continue
 
-        chunks = chunk_text(full_text, MAX_CHUNK_LENGTH)
+        fields, sections, raw = split_txt_sections(full_text)
+        merged_text = build_vector_text(fields, sections, raw)
+        chunks = chunk_text(merged_text, MAX_CHUNK_LENGTH)
         scored = [(chunk, score_chunk("光学工程师", chunk)) for chunk in chunks]
         sorted_chunks = sorted(scored, key=lambda x: x[1], reverse=True)
         selected_chunks = [chunk for chunk, _ in sorted_chunks[:TOP_N]]
