@@ -27,12 +27,10 @@ dashscope.api_key = "sk-1d92a7280052451c84509f57e1b44991"
 # ✅ 环境变量
 WEAVIATE_URL = os.getenv("WEAVIATE_URL", "http://localhost:8080")
 WEAVIATE_CLASS = os.getenv("WEAVIATE_COLLECTION", "Candidates")
-DASHSCOPE_API_KEY = os.getenv("DASHSCOPE_API_KEY", "")
 EMBEDDING_MODEL = os.getenv("DASHSCOPE_EMBEDDING_MODEL", "text-embedding-v1")
-TOP_K = int(os.getenv("DEFAULT_TOP_K", "5"))
-CERTAINTY = float(os.getenv("SEARCH_CERTAINTY", "0.75"))
-SUMMARY_LENGTH = int(os.getenv("SUMMARY_LENGTH", "200"))
-EMBEDDING_CACHE_SIZE = int(os.getenv("EMBEDDING_CACHE_SIZE", "100"))
+TOP_K = 5
+SUMMARY_LENGTH = 200
+EMBEDDING_CACHE_SIZE = 100
 
 # ✅ 日志设置
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -95,14 +93,16 @@ class ResumeSearcher:
             embedding = self.get_embedding(query)
             logger.info(f"✅ 查询向量维度: {len(embedding)}")
 
+            distance_threshold = round(1.0 - 0.4, 4)  # 匹配度阈值 60%
+            logger.info(f"📏 启用搜索阈值: CERTAINTY=0.4 → distance={distance_threshold}")
+
             graphql_query = {
                 "query": f"""
                 {{
                   Get {{
                     {WEAVIATE_CLASS}(
                       nearVector: {{
-                        vector: {json.dumps(embedding)},
-                        distance: 0.3
+                        vector: {json.dumps(embedding)}
                       }},
                       limit: {TOP_K}
                     ) {{

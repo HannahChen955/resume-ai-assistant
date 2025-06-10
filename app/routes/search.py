@@ -28,14 +28,3 @@ async def search_resumes(request: SearchRequest):
         return results
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"搜索失败: {str(e)}")
-
-# ✅ 新增：供 feishu_webhook 调用的同步封装函数
-def search_candidates(query: str, top_k: int = 5) -> list:
-    try:
-        print(f"[🔍 Feishu] 内部搜索关键词: {query}")
-        search_runner = SearchRunner()
-        # 同步环境下调用 async 方法
-        return asyncio.run(search_runner.search(query, top_k))
-    except Exception as e:
-        print(f"[❌ Feishu搜索失败] {e}")
-        return []
