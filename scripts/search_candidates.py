@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-简历搜索系统（REST API版）支持 OpenAI / 通义千问 / DeepSeek
+简历搜索系统（REST API版）通义千问版本
 """
 
 import os
@@ -18,35 +18,44 @@ from dotenv import load_dotenv
 # ✅ 加载 .env
 load_dotenv()
 
+import dashscope
+from dashscope import TextEmbedding
+
+# ✅ 手动写死通义 API Key（确保替换成你的真实 key）
+dashscope.api_key = "sk-1d92a7280052451c84509f57e1b44991"
+
 # ✅ 环境变量
 WEAVIATE_URL = os.getenv("WEAVIATE_URL", "http://localhost:8080")
 WEAVIATE_CLASS = os.getenv("WEAVIATE_COLLECTION", "Candidates")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-ada-002")
-TOP_K = int(os.getenv("DEFAULT_TOP_K", "5"))
-CERTAINTY = float(os.getenv("SEARCH_CERTAINTY", "0.75"))
-SUMMARY_LENGTH = int(os.getenv("SUMMARY_LENGTH", "200"))
-EMBEDDING_CACHE_SIZE = int(os.getenv("EMBEDDING_CACHE_SIZE", "100"))
+EMBEDDING_MODEL = os.getenv("DASHSCOPE_EMBEDDING_MODEL", "text-embedding-v1")
+TOP_K = 5
+SUMMARY_LENGTH = 200
+EMBEDDING_CACHE_SIZE = 100
 
 # ✅ 日志设置
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# ✅ OpenAI Client
-from openai import OpenAI
-openai_client = OpenAI(api_key=OPENAI_API_KEY)
-
-def is_uuid_like(s: str) -> bool:
-    return re.match(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", s) is not None
+# ✅ 通义 embedding 接口封装
+def get_tongyi_embedding(text: str, model: str = EMBEDDING_MODEL) -> List[float]:
+    try:
+        response = TextEmbedding.call(model=model, input=text)
+        if response and "output" in response and "embeddings" in response["output"]:
+            embedding = response["output"]["embeddings"][0]["embedding"]
+            logger.info(f"✅ 通义返回向量长度: {len(embedding)}")
+            return embedding
+        else:
+            logger.error(f"❌ 通义返回结果异常: {response}")
+            return []
+    except Exception as e:
+        logger.error(f"❌ 通义向量生成失败: {e}")
+        return []
 
 class ResumeSearcher:
-    def __init__(self, weaviate_url, weaviate_class, openai_client, embedding_model):
-        self.weaviate_url = weaviate_url
-        self.weaviate_class = weaviate_class
-        self.openai_client = openai_client
-        self.embedding_model = embedding_model
-        print(f"🔧 当前使用 OpenAI 模型: {self.embedding_model}")
+    def __init__(self):
+        print(f"🔧 当前使用通义模型: {EMBEDDING_MODEL}")
         logger.info("🔍 初始化 ResumeSearcher")
+        self.embedding_model = EMBEDDING_MODEL
 
     @staticmethod
     def format_summary(content: str) -> str:
@@ -67,13 +76,13 @@ class ResumeSearcher:
     @lru_cache(maxsize=EMBEDDING_CACHE_SIZE)
     def get_embedding(self, text: str) -> List[float]:
         try:
-            response = self.openai_client.embeddings.create(
-                input=[text],
-                model=self.embedding_model
-            )
-            return response.data[0].embedding
+            from dashscope import TextEmbedding
+            import dashscope
+            dashscope.api_key = os.getenv("DASHSCOPE_API_KEY")
+            response = TextEmbedding.call(model=self.embedding_model, input=text)
+            return response.output["embeddings"][0]["embedding"]
         except Exception as e:
-            logger.error(f"❌ 获取向量失败: {e}")
+            logger.error(f"❌ 获取向量失败（通义）: {e}")
             raise
 
     def search(self, query: str) -> Dict[str, Any]:
@@ -81,43 +90,19 @@ class ResumeSearcher:
         logger.info(f"开始处理查询: {query}")
 
         try:
-            # ✅ 如果是 UUID 直接用 REST API 查询
-            if is_uuid_like(query):
-                logger.info("⚡️ 检测为 UUID，执行精确查找")
-                url = f"{self.weaviate_url}/v1/objects/{self.weaviate_class}/{query}"
-                res = requests.get(url)
-                if res.status_code == 200:
-                    obj = res.json().get("properties", {})
-                    name, job_title = self.parse_filename(obj.get("filename", ""))
-                    elapsed = time.time() - start_time
-                    return {
-                        "查询": query,
-                        "候选人数量": 1,
-                        "处理时间": f"{elapsed:.2f}秒",
-                        "候选人列表": [{
-                            "UUID": query,
-                            "姓名": name,
-                            "应聘职位": job_title,
-                            "文件名": obj.get("filename", ""),
-                            "匹配度": "100.0%",
-                            "简历摘要": self.format_summary(obj.get("content", "")),
-                            "沟通记录": obj.get("notes", []),
-                            "简历内容": obj.get("content", ""),
-                        }]
-                    }
-                else:
-                    return {"查询": query, "候选人数量": 0, "候选人列表": []}
-
-            # ✅ 否则执行向量搜索
             embedding = self.get_embedding(query)
+            logger.info(f"✅ 查询向量维度: {len(embedding)}")
+
+            distance_threshold = round(1.0 - 0.4, 4)  # 匹配度阈值 60%
+            logger.info(f"📏 启用搜索阈值: CERTAINTY=0.4 → distance={distance_threshold}")
+
             graphql_query = {
                 "query": f"""
                 {{
                   Get {{
-                    {self.weaviate_class}(
+                    {WEAVIATE_CLASS}(
                       nearVector: {{
-                        vector: {json.dumps(embedding)},
-                        certainty: {CERTAINTY}
+                        vector: {json.dumps(embedding)}
                       }},
                       limit: {TOP_K}
                     ) {{
@@ -134,11 +119,11 @@ class ResumeSearcher:
                 """
             }
 
-            res = requests.post(f"{self.weaviate_url}/v1/graphql", json=graphql_query)
+            res = requests.post(f"{WEAVIATE_URL}/v1/graphql", json=graphql_query)
             if res.status_code != 200:
                 raise Exception(f"GraphQL 请求失败：{res.status_code} - {res.text}")
 
-            results = res.json()["data"]["Get"][self.weaviate_class]
+            results = res.json()["data"]["Get"][WEAVIATE_CLASS]
             candidates = []
             for obj in results:
                 content = obj.get("content", "")
@@ -190,7 +175,7 @@ def main():
 
     print(f"搜索关键词: {query}")
     try:
-        searcher = ResumeSearcher(WEAVIATE_URL, WEAVIATE_CLASS, openai_client, EMBEDDING_MODEL)
+        searcher = ResumeSearcher()
         result = searcher.search(query)
         print(json.dumps(result, ensure_ascii=False, indent=2))
     except Exception as e:
