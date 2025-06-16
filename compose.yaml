@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   weaviate:
-    image: ec1e4093047a
+    image: semitechnologies/weaviate:local
     platform: linux/amd64
     container_name: weaviate
     ports:
