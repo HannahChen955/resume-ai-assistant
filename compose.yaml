@@ -23,6 +23,20 @@ services:
     networks:
       - rag_network
 
+  fastapi:
+    build: ./app
+    container_name: resume-fastapi
+    ports:
+      - "8000:8000"
+    depends_on:
+      - weaviate
+    environment:
+      - WEAVIATE_URL=http://weaviate:8080
+      - WEAVIATE_COLLECTION=Candidates
+    restart: unless-stopped
+    networks:
+      - rag_network
+
 networks:
   rag_network:
     driver: bridge
