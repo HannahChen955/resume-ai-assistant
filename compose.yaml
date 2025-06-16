@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   weaviate:
-    image: semitechnologies/weaviate:1.30.2
+    build:
+      context: .
+      dockerfile: Dockerfile
     platform: linux/amd64
     container_name: weaviate
     ports:
